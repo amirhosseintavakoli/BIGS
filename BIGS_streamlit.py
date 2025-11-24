@@ -297,14 +297,14 @@ def bargraph_labelling(ax, df, df_total, outcome, total, total_value, key):
 
     bars = ax.barh(df['type'], df['percentage'], color=color_mapping.get(key, 'C0'), alpha=0.7, label=labels.get(key, key))
     for bar, pct in zip(bars, df['percentage']):
-        ax.text(bar.get_width() + 1, bar.get_y() + bar.get_height() / 2, f'{pct:.1f}%', va='center', fontsize=10)
+        ax.text(bar.get_width() + 1, bar.get_y() + bar.get_height() / 2, f'{pct:.1f}%', va='center', fontsize=8)
     
     # add the category's name to the figure
     gap_df = pd.DataFrame([{'type': labels[key],
                             'percentage': 0}])
 
     grouped = grouped[grouped.index.isin(df['type'])]
-    ax.barh(grouped.index, grouped['percentage'], facecolor='none', edgecolor='dimgray', linestyle='--', linewidth=2)
+    ax.barh(grouped.index, grouped['percentage'], facecolor='none', edgecolor='dimgray', linestyle='--', linewidth=1.5)
     ax.barh(gap_df['type'], gap_df['percentage'])
 
 
@@ -420,7 +420,7 @@ def plot_bigs_program_stream(ax, dataframes, dfs_total, program, outcome, year):
         Patch(facecolor=color_mapping[key], label=labels[key])
         for key in category_list if key in labels and key in color_mapping
     ]
-    extra_handle = Patch(facecolor='none', edgecolor='dimgray', linestyle='--', linewidth=3, label='BIGS')
+    extra_handle = Patch(facecolor='none', edgecolor='dimgray', linestyle='--', linewidth=1.5, label='BIGS')
     legend_handles.append(extra_handle)
     plt.legend(loc='lower right', handles=legend_handles, fontsize = 5)
     # function does not create the figure; plotting caller should create and display it
@@ -456,7 +456,7 @@ if __name__ == '__main__':
     # df_main = dataframes_clean.get('support_type', pd.DataFrame())
     # st.write(df_main[(df_main.get('program_select') == program) & (df_main.get('year') == year) & (df_main.get('type') == 'Total')])
 
-    fig, ax = plt.subplots(figsize=(8, 6))
+    fig, ax = plt.subplots(figsize=(10, 5))
     plot_bigs_program_stream(ax, dataframes_clean, dataframes_total, program, outcome, year)
 
     # formatting y-axis
@@ -482,4 +482,3 @@ if __name__ == '__main__':
     plt.grid(False)
     plt.tight_layout()
     st.write(fig)
-
