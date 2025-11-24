@@ -456,7 +456,7 @@ if __name__ == '__main__':
     # df_main = dataframes_clean.get('support_type', pd.DataFrame())
     # st.write(df_main[(df_main.get('program_select') == program) & (df_main.get('year') == year) & (df_main.get('type') == 'Total')])
 
-    fig, ax = plt.subplots(figsize=(10, 8))
+    fig, ax = plt.subplots(figsize=(8, 6))
     plot_bigs_program_stream(ax, dataframes_clean, dataframes_total, program, outcome, year)
 
     # formatting y-axis
@@ -482,3 +482,4 @@ if __name__ == '__main__':
     plt.grid(False)
     plt.tight_layout()
     st.write(fig)
+
