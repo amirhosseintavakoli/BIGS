@@ -7,6 +7,12 @@ from matplotlib.patches import Patch
 
 # Small, focused Streamlit app: load data once, plot on selection changes.
 
+outcome_label = {'value': 'Support Value in Million \$ (2017 dollar)',
+                 'num': 'Number of Enterprise',
+                 'avg_value': 'Average Support in Thousand \$ (2017 dollar)',
+                 'program_num': 'Number of Programs',
+                 'percent': 'Percentage'
+}
 outcome_label2 = {'value': '% Support Value', 'num': '% Enterprise', 'avg_value': '% Average Support'}
 color_mapping = {
     'beneficiary': '#1f77b4', 'support_type': '#ff7f0e', 'enterprise_type': '#2ca02c', 'age': '#d62728',
@@ -19,6 +25,18 @@ labels = {
     'export': 'Export Status', 'rd': 'R&D Status', 'support_rev': 'Support as a Proportion of Revenue',
     'emp': 'Firm Size by Employment', 'hg': 'High-Growth (HG) by Revenue'
 }
+ISED_porfolio_list2 = ['ACOA_APECA',
+                       'CanNor',
+                       'CED_DEC',
+                       'CSA_ASC',
+                       'PACIFICAN', 'PacifiCan',
+                       'PRAIRIESCAN', 'PrairieCan',
+                       'FEDDEV', 'FedDev'
+                       'FEDNOR', 'FedNor',
+                       'NRC_CNRC',
+                       'NSERC_CRSNG',
+                       'NSERC',
+                       'WD_DEO']
 program_select_list = ['CSBFP (ISED)', 'SIF (ISED)', 'IRAP (NRC)','Mitacs (ISED)', 'Alliance Grant (NSERC)', 'SREP (NRCAN)']
 outcome_list = ['value', 'num', 'avg_value']
 year_list = list(range(2022, 2014, -1))
@@ -280,9 +298,57 @@ def clean_bigs_data(df):
     df.loc[df['program_id'].str.match('IRAP', na=False), 'program_select'] = 'IRAP (NRC)'
     df.loc[df['program'].str.contains('Mitacs', na=False), 'program_select'] = 'Mitacs (ISED)'
     df.loc[df['program'].str.contains('Alliance grant', na=False ), 'program_select'] = 'Alliance Grant (NSERC)'
-    df.loc[df['program'].str.contains('Smart Renewables', na=False), 'program_select'] = 'SREP (NRCAN)'    
+    df.loc[df['program'].str.contains('Smart Renewables', na=False), 'program_select'] = 'SREP (NRCAN)'
 
     return df, df2
+
+def plot_bigs_by_program(df):
+
+    st.subheader(f'BIGS in {year}')
+    df = df[df['year'] == year]
+    # df['value'] = df['value'].astype(int)
+
+    df['color'] = 'dimgrey'
+    df.loc[df.program.str.contains('|'.join(ISED_porfolio_list2)), 'color'] = 'deepskyblue'
+    df.loc[df.program.str.contains('ISED_ISDE'), 'color'] = 'blue'
+
+    df['agency'] = [p.split(' - ')[0] for p in df.program]
+    df['agency'] = [p.split('_')[0] for p in df.agency]
+    df['programs'] = [p.split(' - ')[1:] for p in df.program]
+    df['program'] = [', '.join(p) + ' (' + a + ')' for p, a in zip(df['programs'], df['agency'])]
+
+    # rename program labels
+    df['program'] = df['program'].str.replace('Regional Economic Growth Through Innovation', 'REGI', regex=False)
+    df['program'] = df['program'].str.replace('Canada Small Business Financing Program', 'CSBFP', regex=False)
+    df['program'] = df['program'].str.replace('Strategic Innovation Fund', 'SIF', regex=False)
+    df['program'] = df['program'].str.replace('Industrial Research Assistance Program', 'IRAP', regex=False)
+    df['program'] = df['program'].str.replace('Contributions in support of', '', regex=False)
+    df['program'] = df['program'].str.replace('Contributions in Support of', '', regex=False)
+
+    df = df.dropna(subset='value').sort_values(by='value').tail(20)
+
+    fig, ax = plt.subplots(figsize=(15, 5))
+    bars = plt.barh(df['program'], df['value'], color = df['color'])
+
+    # Display the value at the end of each bar
+    for bar, pct in zip(bars, df['value']):
+        plt.text(bar.get_width() + 1, bar.get_y() + bar.get_height()/2, f'{pct:,.0f}', va='center')
+
+    legend_elements = [
+        Patch(facecolor='blue', label='ISED'),
+        Patch(facecolor='deepskyblue', label='ISED portfolio'),
+        Patch(facecolor='dimgrey', label='other BIGS')
+    ]
+
+    # Remove top and right spines
+    ax = plt.gca()
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    plt.grid(False)
+
+    plt.xlabel(outcome_label['value'])
+    plt.legend(title='Programs', loc='lower right', handles=legend_elements)
+    st.pyplot(fig)
 
 
 def bargraph_labelling(ax, df, df_total, outcome, total, total_value, key):
@@ -427,10 +493,6 @@ def plot_bigs_program_stream(ax, dataframes, dfs_total, program, outcome, year):
     return
 
 
-st.set_page_config(page_title="BIGS Interactive Stats Viewer", layout="wide")
-st.title("Interactive Stats Viewer")
-
-
 @st.cache_data
 def load_and_clean_bigs_data(path='BIGS_ProgramStream_Tables_2014_2022_Final.xlsx'):
     raw = load_bigs_data(path)
@@ -443,18 +505,13 @@ def load_and_clean_bigs_data(path='BIGS_ProgramStream_Tables_2014_2022_Final.xls
     return dataframes_clean, dataframes_total
 
 
-if __name__ == '__main__':
-    dataframes_clean, dataframes_total = load_and_clean_bigs_data('BIGS_ProgramStream_Tables_2014_2022_Final.xlsx')
-
-    st.sidebar.markdown('**Controls**')
-    program = st.sidebar.selectbox('Select Program:', program_select_list)
-    year = st.sidebar.selectbox('Select Year:', year_list)
-    outcome = 'value' # default outcome
+def program_dashboard():
+    # Show currently applied filters in sidebar
+    # st.sidebar.write(f"Program: {program}")
+    # st.sidebar.write(f"Outcome: {outcome}")
+    # st.sidebar.write(f"Year: {year}")
 
     st.subheader(f'Distribution of {outcome_label2[outcome]} for {program} in {year}')
-    
-    # df_main = dataframes_clean.get('support_type', pd.DataFrame())
-    # st.write(df_main[(df_main.get('program_select') == program) & (df_main.get('year') == year) & (df_main.get('type') == 'Total')])
 
     fig, ax = plt.subplots(figsize=(10, 5))
     plot_bigs_program_stream(ax, dataframes_clean, dataframes_total, program, outcome, year)
@@ -481,4 +538,55 @@ if __name__ == '__main__':
     plt.xlim(0, 100)
     plt.grid(False)
     plt.tight_layout()
-    st.write(fig)
+    st.pyplot(fig)
+
+
+st.set_page_config(page_title="BIGS Interactive Stats Viewer", layout="wide")
+st.title("Interactive Stats Viewer")
+
+if __name__ == '__main__':
+    dataframes_clean, dataframes_total = load_and_clean_bigs_data('BIGS_ProgramStream_Tables_2014_2022_Final.xlsx')
+
+    # Initialize st.session_state defaults so selections persist between runs
+    if 'program' not in st.session_state:
+        st.session_state.program = program_select_list[0]
+    if 'outcome' not in st.session_state:
+        st.session_state.outcome = 'value'
+    if 'year' not in st.session_state:
+        st.session_state.year = year_list[0]
+
+    st.subheader('BIGS Programs by Total Support Value')
+    with st.form('controls_form1'):
+        sel_year = st.selectbox('Select Year:', year_list, index=year_list.index(st.session_state.year))
+        submitted = st.form_submit_button('Apply')
+
+    if submitted:
+        st.session_state.year = sel_year
+        year = st.session_state.year
+
+        plot_bigs_by_program(dataframes_clean['beneficiary'])
+
+    st.subheader('Program Stream Details')
+    with st.form('controls_form2'):
+        sel_program = st.selectbox('Select Program:', program_select_list, index=program_select_list.index(st.session_state.program))
+        # sel_outcome = st.selectbox('Select Outcome:', outcome_list, index=outcome_list.index(st.session_state.outcome))
+        sel_year = st.selectbox('Select Year:', year_list, index=year_list.index(st.session_state.year))
+        submitted = st.form_submit_button('Apply')
+
+    if submitted:
+        # apply the submitted values into session state so they persist after reruns
+        st.session_state.program = sel_program
+        # st.session_state.outcome = sel_outcome
+        st.session_state.year = sel_year
+
+        # Read final values from session state (apply only after submit)
+        program = st.session_state.program
+        outcome = st.session_state.outcome
+        year = st.session_state.year    
+
+        program_dashboard()
+    
+
+
+
+    
